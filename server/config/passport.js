@@ -1,5 +1,5 @@
 const passport = require('passport');
-const UserModel = require('./database');
+const {UserModel} = require('./database');
 
 const JwtStrategy = require('passport-jwt').Strategy,
     ExtractJwt = require('passport-jwt').ExtractJwt;
@@ -9,7 +9,8 @@ opts.jwtFromRequest = ExtractJwt.fromAuthHeaderAsBearerToken();
 opts.secretOrKey = "secret random key";
 
 passport.use(new JwtStrategy(opts, function(jwt_payload, done) {
-    UserModel.findOne({id: jwt_payload.id}, function(err, user) {
+    //console.log(jwt_payload);
+    UserModel.findOne({_id: jwt_payload.id}, function(err, user) {
         if (err) {
             return done(err, false);
         }
