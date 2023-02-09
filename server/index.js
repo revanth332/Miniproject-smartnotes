@@ -30,8 +30,10 @@ require('./config/passport')
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(passport.initialize());
-app.use(cors())
-
+app.use(cors({
+    origin:["https://localhost:5000","https://smartnotes.onrender.com"],
+})
+)
 
 app.post("/subscribe", (req, res) => {
     // Get pushSubscription object
@@ -158,7 +160,8 @@ app.post("/addtodos",(req,res) => {
         username : req.body.username,
         todoData : req.body.todoData,
         time : req.body.time,
-        email : req.body.email
+        email : req.body.email,
+        targetDate: new Date() || req.body.date
     })
     todo.save().then(todo => {
         UserModel.updateOne({_id:req.body.userid},{$inc : {todos:1}}).then(todos => {
@@ -209,7 +212,7 @@ app.post('/todos',(req,res) => {
     })
 })
 
-app.post('/updatetodo',(req,res)=> {
+app.post('/marktodo',(req,res)=> {
     TodoModel.updateOne({_id:req.body.id},{$set : {completed:true}}).then(todo => {
         UserModel.updateOne({_id:req.body.userid},{$inc : {todosCompleted:1}}).then(todos => {
             res.send({
@@ -229,6 +232,50 @@ app.post('/updatetodo',(req,res)=> {
             message:"todo not updated"
         })
     })
+})
+
+app.post("/updatetodo",(req,res) => {
+    todoid = req.body.todoid;
+    data = req.body.todoData
+    date = new Date(req.body.date);
+    time = req.body.time;
+    expired=false;
+    if(new Date(date.getFullYear(),date.getMonth(),date.getDate(),time.slice(0,2),time.slice(3,5)).getTime() <= new Date().getTime()){
+        expired = true
+        console.log("less",date.getFullYear())
+    }
+    TodoModel.updateOne({_id:todoid},{$set : {date:date,time:time,todoData:data,expired:expired}}).then(todo => {
+        res.send({
+            update:true,
+            message:"todo updated successfuly"
+        })
+    }).catch(err => {
+        res.send({
+            update:false,
+            message:"todo not updated!",
+            error:err
+        })
+    })
+
+})
+
+app.post("/updatenote",(req,res) => {
+    noteid = req.body.noteid;
+    data = req.body.noteData
+    title=req.body.title
+    NoteModel.updateOne({_id:noteid},{$set : {noteData:data,title:title}}).then(note => {
+        res.send({
+            update:true,
+            message:"note updated successfuly"
+        })
+    }).catch(err => {
+        res.send({
+            update:false,
+            message:"note not updated!",
+            error:err
+        })
+    })
+
 })
 
 app.post('/deletetodo',(req,res)=>{
@@ -305,7 +352,7 @@ setInterval(function(){
     TodoModel.find({}).then(todos => {
         todos.forEach(function(todo){
             UserModel.findOne({username:todo.username}).then(user => {
-                if(todo.time.slice(0,2) == new Date().getHours() && todo.time.slice(3,5) == new Date().getMinutes() && new Date().getSeconds() == 5){
+                if(todo.time.slice(0,2) == new Date().getHours() && todo.time.slice(3,5) == new Date().getMinutes() && new Date().getSeconds() == 5 && todo.targetDate.getDate() == new Date().getDate() && todo.targetDate.getMonth() == new Date().getMonth() && todo.targetDate.getFullYear() == new Date().getFullYear()){
                     let mailDetails = {
                         from: 'revanthvera69@gmail.com',
                         to: user.email,
@@ -320,6 +367,10 @@ setInterval(function(){
                             console.log('Email sent successfully');
                         }
                     });
+
+                    TodoModel.updateOne({_id:todo._id},{$set : {expired:true}}).then(item => {
+                        console.log(todo._id)
+                    }).catch(err => console.log(err));
                 }
             })
         })

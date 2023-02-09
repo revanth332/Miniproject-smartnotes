@@ -39,6 +39,14 @@ const todoSchema = mongoose.Schema({
         type:Boolean,
         default:false
     },
+    expired:{
+        type:Boolean,
+        default:false
+    },
+    targetDate:{
+        type:Date,
+        default:Date.now
+    },
     date : {
         type:Date,
         default:Date.now
